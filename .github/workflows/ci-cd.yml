@@ -1,0 +1,46 @@
+name: CI/CD To-Do
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Validar a construção da imagem Docker
+        run: docker build -t todo-app:ci .
+
+      - name: Executar os testes da aplicação
+        run: docker run --rm todo-app:ci pytest test_app.py
+
+  deploy:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar a chave SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Copiar o código para a EC2
+        run: |
+          rsync -avz --delete --exclude='.git' --exclude='.env' \
+            -e "ssh -i ~/.ssh/id_rsa" \
+            ./ "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/todo-app/"
+
+      - name: Construir a imagem e recarregar a aplicação
+        run: |
+          ssh -i ~/.ssh/id_rsa "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" \
+            "cd ~/todo-app && docker compose up -d --build"
