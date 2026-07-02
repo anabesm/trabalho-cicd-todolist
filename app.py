@@ -17,11 +17,17 @@ def init_db():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        # Cria a tabela com a coluna completed caso não exista
         cur.execute('''
             CREATE TABLE IF NOT EXISTS todos (
                 id SERIAL PRIMARY KEY,
-                task VARCHAR(255) NOT NULL
+                task VARCHAR(255) NOT NULL,
+                completed BOOLEAN DEFAULT FALSE
             );
+        ''')
+        # Garante a atualização caso a tabela já existisse sem a coluna completed
+        cur.execute('''
+            ALTER TABLE todos ADD COLUMN IF NOT EXISTS completed BOOLEAN DEFAULT FALSE;
         ''')
         conn.commit()
         cur.close()
@@ -34,7 +40,8 @@ def index():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('SELECT id, task FROM todos ORDER BY id DESC;')
+        # Agora buscamos também o status 'completed'
+        cur.execute('SELECT id, task, completed FROM todos ORDER BY id DESC;')
         todos = cur.fetchall()
         cur.close()
         conn.close()
@@ -52,6 +59,27 @@ def add():
         conn.commit()
         cur.close()
         conn.close()
+    return redirect(url_for('index'))
+
+@app.route('/complete/<int:todo_id>', methods=['POST'])
+def complete(todo_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    # Alterna o status (se for True vira False, se for False vira True)
+    cur.execute('UPDATE todos SET completed = NOT completed WHERE id = %s', (todo_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return redirect(url_for('index'))
+
+@app.route('/delete/<int:todo_id>', methods=['POST'])
+def delete(todo_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('DELETE FROM todos WHERE id = %s', (todo_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
     return redirect(url_for('index'))
 
 @app.route('/health')

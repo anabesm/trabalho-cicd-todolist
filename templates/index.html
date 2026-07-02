@@ -5,10 +5,25 @@
     <title>Minha To-Do List</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; text-align: center; }
-        input[type="text"] { width: 70%; padding: 10px; }
-        button { padding: 10px 20px; cursor: pointer; }
+        input[type="text"] { width: 70%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 20px; cursor: pointer; border-radius: 4px; border: none; }
+        .btn-add { background-color: #28a745; color: white; }
         ul { list-style-type: none; padding: 0; }
-        li { background: #f4f4f4; margin: 10px 0; padding: 10px; border-radius: 5px; }
+        li { 
+            background: #f4f4f4; 
+            margin: 10px 0; 
+            padding: 12px; 
+            border-radius: 5px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .task-text { font-size: 16px; word-break: break-all; text-align: left; flex-grow: 1; }
+        .completed { text-decoration: line-through; color: #888; }
+        .actions { display: flex; gap: 5px; }
+        .btn-complete { background-color: #007bff; color: white; padding: 5px 10px; }
+        .btn-delete { background-color: #dc3545; color: white; padding: 5px 10px; }
+        form { display: inline; }
     </style>
 </head>
 <body>
@@ -17,12 +32,26 @@
 
     <form action="/add" method="POST">
         <input type="text" name="task" placeholder="Digite uma nova tarefa..." required>
-        <button type="submit">Adicionar</button>
+        <button type="submit" class="btn-add">Adicionar</button>
     </form>
 
     <ul>
         {% for todo in todos %}
-            <li>{{ todo[1] }}</li>
+            <li>
+                <span class="task-text {% if todo[2] %}completed{% endif %}">
+                    {{ todo[1] }}
+                </span>
+                <div class="actions">
+                    <form action="/complete/{{ todo[0] }}" method="POST">
+                        <button type="submit" class="btn-complete">
+                            {% if todo[2] %}↩ Desfazer{% else %}✓ Concluir{% endif %}
+                        </button>
+                    </form>
+                    <form action="/delete/{{ todo[0] }}" method="POST">
+                        <button type="submit" class="btn-delete">🗑 Excluir</button>
+                    </form>
+                </div>
+            </li>
         {% else %}
             <li>Nenhuma tarefa cadastrada.</li>
         {% endfor %}
